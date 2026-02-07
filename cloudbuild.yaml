@@ -1,0 +1,100 @@
+# Cloud Build configuration for automated deployment
+# Triggers on push to main branch
+
+steps:
+  # Step 1: Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
+      - '-f'
+      - 'Dockerfile.production'
+      - '.'
+    id: 'build-image'
+
+  # Step 2: Push the container image with commit SHA tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
+    id: 'push-sha-image'
+    waitFor: ['build-image']
+
+  # Step 3: Push the container image with latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
+    id: 'push-latest-image'
+    waitFor: ['build-image']
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'civicfix-ai-service'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '2Gi'
+      - '--cpu'
+      - '2'
+      - '--timeout'
+      - '60'
+      - '--max-instances'
+      - '100'
+      - '--min-instances'
+      - '1'
+      - '--concurrency'
+      - '80'
+      - '--cpu-boost'
+      - '--set-secrets'
+      - 'DATABASE_URL=database-url:latest,API_KEY=ai-service-api-key:latest,SECRET_KEY=ai-service-secret-key:latest'
+      - '--set-env-vars'
+      - 'ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
+    id: 'deploy-cloud-run'
+    waitFor: ['push-sha-image']
+
+  # Step 5: Run health check
+  - name: 'gcr.io/cloud-builders/curl'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        SERVICE_URL=$(gcloud run services describe civicfix-ai-service \
+          --region us-central1 \
+          --format 'value(status.url)')
+        echo "Testing service at: $SERVICE_URL"
+        curl -f $SERVICE_URL/health || exit 1
+        echo "Health check passed!"
+    id: 'health-check'
+    waitFor: ['deploy-cloud-run']
+
+# Images to be pushed to Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
+
+# Build options
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+  substitutionOption: 'ALLOW_LOOSE'
+
+# Timeout for entire build
+timeout: '1200s'
+
+# Substitutions (can be overridden)
+substitutions:
+  _REGION: 'us-central1'
+  _SERVICE_NAME: 'civicfix-ai-service'

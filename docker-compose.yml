@@ -1,0 +1,32 @@
+# CivicFix AI Verification Service - Docker Compose
+
+version: '3.8'
+
+services:
+  ai-service:
+    build: .
+    container_name: civicfix-ai-service
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVICE_NAME=civicfix-ai-service
+      - SERVICE_PORT=8001
+      - DEBUG=true
+      - DATABASE_URL=${DATABASE_URL}
+      - API_KEY=${API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENABLE_MOCK_AI=true
+      - FAKE_DETECTION_ENABLED=true
+      - DUPLICATE_DETECTION_ENABLED=true
+      - LOCATION_VALIDATION_ENABLED=true
+      - CATEGORY_VALIDATION_ENABLED=true
+    volumes:
+      - ./app:/app/app
+      - ./models:/app/models
+    restart: unless-stopped
+    networks:
+      - civicfix-network
+
+networks:
+  civicfix-network:
+    driver: bridge
