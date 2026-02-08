@@ -10,7 +10,6 @@ services:
       - "8001:8080"
     environment:
       - SERVICE_NAME=civicfix-ai-service
-      - PORT=8080
       - DEBUG=true
       - DATABASE_URL=${DATABASE_URL}
       - API_KEY=${API_KEY}
