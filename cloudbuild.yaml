@@ -71,11 +71,11 @@ steps:
     args:
       - '-c'
       - |
-        SERVICE_URL=$(gcloud run services describe civicfix-ai-service \
+        SERVICE_URL=$$(gcloud run services describe civicfix-ai-service \
           --region us-central1 \
           --format 'value(status.url)')
-        echo "Testing service at: $SERVICE_URL"
-        curl -f $SERVICE_URL/health || exit 1
+        echo "Testing service at: $$SERVICE_URL"
+        curl -f $$SERVICE_URL/health || exit 1
         echo "Health check passed!"
     id: 'health-check'
     waitFor: ['deploy-cloud-run']
