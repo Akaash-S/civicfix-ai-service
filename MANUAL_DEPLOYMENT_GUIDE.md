@@ -131,7 +131,7 @@ gcloud run deploy civicfix-ai-service \
   --min-instances 1 \
   --concurrency 80 \
   --set-secrets "DATABASE_URL=database-url:latest,API_KEY=ai-service-api-key:latest,SECRET_KEY=ai-service-secret-key:latest" \
-  --set-env-vars "PORT=8080,ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info"
+  --set-env-vars "ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info"
 ```
 
 ### 4.2 Wait for Deployment

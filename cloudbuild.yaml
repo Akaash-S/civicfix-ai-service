@@ -50,7 +50,7 @@ steps:
       - '--set-secrets'
       - 'DATABASE_URL=database-url:latest,API_KEY=ai-service-api-key:latest,SECRET_KEY=ai-service-secret-key:latest'
       - '--set-env-vars'
-      - 'PORT=8080,ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
+      - 'ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
     id: 'deploy-cloud-run'
     waitFor: ['push-latest-image']
 
