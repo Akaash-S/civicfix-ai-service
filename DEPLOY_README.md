@@ -1,78 +1,71 @@
 # Quick Deployment Guide
 
-## 🚀 Deploy in 2 Steps
+## 🚀 Deploy Now (Simplest Method)
 
-### Option A: Direct Deployment (Recommended)
 ```bash
 cd ai-service
-./deploy-direct.sh
+bash deploy-simple.sh
 ```
 
-### Option B: Cloud Build
+**This avoids all gcloud bugs!**
+
+---
+
+## 🔧 Having gcloud Issues?
+
+If you get `ERROR: gcloud crashed (TypeError)`:
+
+### Option 1: Use Simple Deploy (Recommended)
 ```bash
-cd ai-service
-gcloud builds submit --config cloudbuild.yaml --project=asolvitra-skillbridge
+bash deploy-simple.sh
 ```
+
+### Option 2: Diagnose gcloud
+```bash
+bash diagnose-gcloud.sh
+```
+
+Then try:
+```bash
+gcloud components update
+gcloud auth login
+```
+
+### Option 3: Deploy via Console
+1. Build: `docker build -t gcr.io/asolvitra-skillbridge/civicfix-ai-service:latest .`
+2. Push: `docker push gcr.io/asolvitra-skillbridge/civicfix-ai-service:latest`
+3. Go to: https://console.cloud.google.com/run
+4. Click "CREATE SERVICE" and configure manually
+
+---
+
+## 📁 Deployment Scripts
+
+- `deploy-simple.sh` - **RECOMMENDED** - Simplest, most reliable
+- `deploy-direct.sh` - Full-featured with error handling
+- `deploy-to-gcp.sh` - Cloud Build deployment
+- `diagnose-gcloud.sh` - Diagnose gcloud issues
 
 ---
 
 ## ✅ What's Fixed
 
-1. ✅ **Single YAML file** - Only `cloudbuild.yaml` (removed duplicates)
+1. ✅ **Single YAML file** - Only `cloudbuild.yaml`
 2. ✅ **PORT issue fixed** - Removed from env vars
 3. ✅ **Quota issue fixed** - Max instances set to 28
-4. ✅ **Metadata server issue** - Use `deploy-direct.sh` to avoid
-
----
-
-## 📁 Files
-
-### Deployment
-- `cloudbuild.yaml` - Cloud Build config (single file)
-- `deploy-direct.sh` - Direct deployment script
-- `deploy-to-gcp.sh` - Cloud Build deployment script
-- `Dockerfile` - Container definition
-
-### Documentation
-- `DEPLOY_README.md` - This file (quick start)
-- `DEPLOYMENT_OPTIONS.md` - All deployment methods
-- `MANUAL_DEPLOYMENT_GUIDE.md` - Step-by-step manual
-- `QUOTA_OPTIMIZATION.md` - Resource optimization
-- `DEPLOYMENT_FIX.md` - Issues and solutions
-
----
-
-## 🔧 Configuration
-
-**Current Settings:**
-- Memory: 2Gi
-- CPU: 2
-- Max Instances: 28
-- Min Instances: 1
-- Region: us-central1
-- Project: asolvitra-skillbridge
-
-**Secrets (already created):**
-- database-url
-- ai-service-api-key
-- ai-service-secret-key
+4. ✅ **gcloud crash avoided** - Use `deploy-simple.sh`
 
 ---
 
 ## 🧪 Test After Deployment
 
+Visit the Cloud Console to get your service URL:
+https://console.cloud.google.com/run/detail/us-central1/civicfix-ai-service?project=asolvitra-skillbridge
+
+Then test:
 ```bash
-# Get service URL
-SERVICE_URL=$(gcloud run services describe civicfix-ai-service \
-  --region us-central1 \
-  --format 'value(status.url)')
-
-# Test health
-curl $SERVICE_URL/health
-
-# Test with API key
-curl -H "X-API-Key: 8209d737eb28d61c61026a61ee96326a96ebbc67ccc89ac04a8b6495f63d011b0f1053467bd9970399e7ad5e598115f1489265d916868dc55d1d687a06b33562" \
-  $SERVICE_URL/api/v1/stats
+# Replace with your actual URL
+curl https://civicfix-ai-service-xxxxx-uc.a.run.app/health
 ```
 
 ---
@@ -89,13 +82,13 @@ https://console.cloud.google.com/run/detail/us-central1/civicfix-ai-service
 
 ---
 
-## ❓ Having Issues?
+## ❓ Need Help?
 
 See `DEPLOYMENT_OPTIONS.md` for:
+- All deployment methods
 - Troubleshooting guide
-- Alternative deployment methods
-- Common errors and fixes
+- Alternative approaches
 
 ---
 
-**Ready to deploy? Run:** `./deploy-direct.sh`
+**Ready to deploy? Run:** `bash deploy-simple.sh`
