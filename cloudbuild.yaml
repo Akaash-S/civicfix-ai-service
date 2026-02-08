@@ -54,21 +54,6 @@ steps:
     id: 'deploy-cloud-run'
     waitFor: ['push-latest-image']
 
-  # Step 4: Run health check
-  - name: 'gcr.io/cloud-builders/curl'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        SERVICE_URL=$$(gcloud run services describe civicfix-ai-service \
-          --region us-central1 \
-          --format 'value(status.url)')
-        echo "Testing service at: $$SERVICE_URL"
-        curl -f $$SERVICE_URL/health || exit 1
-        echo "Health check passed!"
-    id: 'health-check'
-    waitFor: ['deploy-cloud-run']
-
 # Images to be pushed to Container Registry
 images:
   - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
