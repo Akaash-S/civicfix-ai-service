@@ -127,7 +127,7 @@ gcloud run deploy civicfix-ai-service \
   --memory 2Gi \
   --cpu 2 \
   --timeout 60 \
-  --max-instances 100 \
+  --max-instances 28 \
   --min-instances 1 \
   --concurrency 80 \
   --set-secrets "DATABASE_URL=database-url:latest,API_KEY=ai-service-api-key:latest,SECRET_KEY=ai-service-secret-key:latest" \

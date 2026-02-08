@@ -1,103 +1,85 @@
-# Cloud Run Deployment Fix - PORT Environment Variable Issue
+# Cloud Run Deployment Fixes
 
-## Problem
+## Issue 1: PORT Environment Variable ✅ FIXED
+
+### Problem
 ```
-ERROR: (gcloud.run.deploy) spec.template.spec.containers[0].env: 
-The following reserved env names were provided: PORT. 
+ERROR: The following reserved env names were provided: PORT. 
 These values are automatically set by the system.
 ```
 
-## Root Cause
-Cloud Run **automatically sets the `PORT` environment variable** and does not allow manual override. The deployment was failing because we tried to set `PORT=8080` in the `--set-env-vars` flag.
+### Solution
+Removed `PORT=8080` from `--set-env-vars` in cloudbuild.yaml
 
-## Solution Applied
+---
 
-### 1. Fixed `cloudbuild.yaml`
-**Before:**
+## Issue 2: Quota Exceeded ✅ FIXED
+
+### Problem
+```
+ERROR: Max instances must be set to 28 or fewer to set the requested total CPU.
+Quota violated:
+- CpuAllocPerProjectRegion requested: 200000 allowed: 56000
+- MemAllocPerProjectRegion requested: 214748364800 allowed: 120259084288
+```
+
+### Root Cause
+- Requested: 100 instances × 2 CPUs = 200 CPUs
+- Allowed: 56 CPUs total
+- Maximum possible: 56 ÷ 2 = **28 instances**
+
+### Solution
+Changed `--max-instances` from 100 to 28 in cloudbuild.yaml
+
+### Your Quota Limits
+- **CPU**: 56 vCPUs per region
+- **Memory**: ~120 GiB per region
+- **With 2 CPU per instance**: Max 28 instances
+- **With 1 CPU per instance**: Max 56 instances
+
+---
+
+## Current Configuration ✅
+
 ```yaml
-- '--set-env-vars'
-- 'PORT=8080,ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
+Memory: 2Gi
+CPU: 2
+Max Instances: 28  # Changed from 100
+Min Instances: 1
+Concurrency: 80
+Timeout: 60s
 ```
 
-**After:**
-```yaml
-- '--set-env-vars'
-- 'ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
-```
+**Capacity:**
+- Max concurrent requests: 2,240 (28 × 80)
+- Total CPU: 56 vCPUs (full quota)
+- Total Memory: 56 GiB
 
-### 2. Updated `Dockerfile`
-The Dockerfile already correctly uses `${PORT:-8080}` in the CMD, which allows Cloud Run to inject its own PORT value:
-```dockerfile
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
-```
-
-- Cloud Run will inject `PORT` at runtime (usually 8080)
-- The `:-8080` provides a fallback for local development
-- Removed HEALTHCHECK as Cloud Run has its own health checking mechanism
-
-### 3. Updated Documentation
-- Fixed `MANUAL_DEPLOYMENT_GUIDE.md` to remove PORT from env vars
-- Updated `cloudbuild-no-secrets.yaml` for testing
-
-## How Cloud Run PORT Works
-
-1. **Cloud Run automatically sets PORT** - You cannot override it
-2. **Default value is 8080** - But Cloud Run may use other ports
-3. **Your app must listen on $PORT** - Not a hardcoded port
-4. **Dockerfile can set default** - `ENV PORT=8080` is fine for local dev
-5. **CMD must use variable** - `--port ${PORT}` or `--port $PORT`
+---
 
 ## Deploy Now
 
-Your deployment should now work:
-
 ```bash
-# From ai-service directory
+cd ai-service
 gcloud builds submit --config cloudbuild.yaml
 ```
 
-Or use the automated script:
+Or:
 ```bash
 ./deploy-to-gcp.sh
 ```
 
-## Verification
+---
 
-After deployment succeeds, test:
-```bash
-SERVICE_URL=$(gcloud run services describe civicfix-ai-service \
-  --region us-central1 \
-  --format 'value(status.url)')
+## Alternative Configurations
 
-curl $SERVICE_URL/health
-```
-
-## Key Takeaways
-
-✅ **DO**: Let Cloud Run set PORT automatically  
-✅ **DO**: Use `${PORT}` variable in your CMD  
-✅ **DO**: Set default in Dockerfile for local dev  
-
-❌ **DON'T**: Set PORT in `--set-env-vars`  
-❌ **DON'T**: Hardcode port in CMD  
-❌ **DON'T**: Override PORT in Cloud Run config  
-
-## Reserved Environment Variables in Cloud Run
-
-Cloud Run automatically sets these - **DO NOT override**:
-- `PORT` - The port your app should listen on
-- `K_SERVICE` - The name of the Cloud Run service
-- `K_REVISION` - The name of the Cloud Run revision
-- `K_CONFIGURATION` - The name of the configuration
-
-## Additional Resources
-
-- [Cloud Run Environment Variables](https://cloud.google.com/run/docs/configuring/environment-variables)
-- [Cloud Run Container Contract](https://cloud.google.com/run/docs/container-contract)
+See `QUOTA_OPTIMIZATION.md` for:
+- Cost-optimized setup (1 CPU, 1 GiB)
+- High concurrency setup (56 instances)
+- Multi-region deployment
+- Quota increase requests
 
 ---
 
-**Status**: ✅ FIXED  
-**Date**: February 2026  
-**Issue**: PORT environment variable conflict  
-**Resolution**: Removed PORT from --set-env-vars in cloudbuild.yaml
+**Status**: ✅ ALL ISSUES FIXED  
+**Date**: February 2026
