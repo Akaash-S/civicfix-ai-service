@@ -35,7 +35,7 @@ requests==2.31.0
 
 # Image Analysis
 google-cloud-vision==3.5.0  # Optional: Google Vision API
-imagededup==0.3.2
+imagededup==0.3.3
 
 # Utilities
 python-dotenv==1.0.0
