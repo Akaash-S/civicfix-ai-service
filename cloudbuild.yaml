@@ -1,73 +1,54 @@
-# Cloud Build configuration for automated deployment
-# Triggers on push to main branch
+# Cloud Build Configuration for CivicFix AI Service
+# Single file for Cloud Run deployment
 
 steps:
-  # Step 1: Build the container image
+  # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
       - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
-      - '-f'
-      - 'Dockerfile'
       - '.'
-    id: 'build-image'
+    id: 'build'
 
-  # Step 2: Push the container image with latest tag
+  # Step 2: Push to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
-    id: 'push-latest-image'
-    waitFor: ['build-image']
+    id: 'push'
+    waitFor: ['build']
 
   # Step 3: Deploy to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     args:
+      - 'gcloud'
       - 'run'
       - 'deploy'
       - 'civicfix-ai-service'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
-      - '--region'
-      - 'us-central1'
-      - '--platform'
-      - 'managed'
+      - '--image=gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
+      - '--region=us-central1'
+      - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--memory'
-      - '2Gi'
-      - '--cpu'
-      - '2'
-      - '--timeout'
-      - '60'
-      - '--max-instances'
-      - '28'
-      - '--min-instances'
-      - '1'
-      - '--concurrency'
-      - '80'
-      - '--set-secrets'
-      - 'DATABASE_URL=database-url:latest,API_KEY=ai-service-api-key:latest,SECRET_KEY=ai-service-secret-key:latest'
-      - '--set-env-vars'
-      - 'ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
-    id: 'deploy-cloud-run'
-    waitFor: ['push-latest-image']
+      - '--memory=2Gi'
+      - '--cpu=2'
+      - '--timeout=60'
+      - '--max-instances=28'
+      - '--min-instances=1'
+      - '--concurrency=80'
+      - '--set-secrets=DATABASE_URL=database-url:latest,API_KEY=ai-service-api-key:latest,SECRET_KEY=ai-service-secret-key:latest'
+      - '--set-env-vars=ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
+    id: 'deploy'
+    waitFor: ['push']
 
-# Images to be pushed to Container Registry
+# Images to push to registry
 images:
   - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
 
-# Build options
+# Build configuration
 options:
-  machineType: 'N1_HIGHCPU_8'
-  logging: CLOUD_LOGGING_ONLY
-  substitutionOption: 'ALLOW_LOOSE'
+  machineType: 'E2_HIGHCPU_8'
+  logging: 'CLOUD_LOGGING_ONLY'
 
-# Timeout for entire build
-timeout: '1200s'
-
-# Substitutions (can be overridden)
-substitutions:
-  _REGION: 'us-central1'
-  _SERVICE_NAME: 'civicfix-ai-service'
+# Overall timeout
+timeout: '1800s'
