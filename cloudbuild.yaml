@@ -7,7 +7,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:${SHORT_SHA:-latest}'
       - '-t'
       - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
       - '-f'
@@ -15,11 +15,11 @@ steps:
       - '.'
     id: 'build-image'
 
-  # Step 2: Push the container image with commit SHA tag
+  # Step 2: Push the container image with commit SHA tag (if available)
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:${SHORT_SHA:-latest}'
     id: 'push-sha-image'
     waitFor: ['build-image']
 
@@ -39,7 +39,7 @@ steps:
       - 'deploy'
       - 'civicfix-ai-service'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
+      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -63,7 +63,7 @@ steps:
       - '--set-env-vars'
       - 'ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
     id: 'deploy-cloud-run'
-    waitFor: ['push-sha-image']
+    waitFor: ['push-latest-image']
 
   # Step 5: Run health check
   - name: 'gcr.io/cloud-builders/curl'
@@ -82,7 +82,6 @@ steps:
 
 # Images to be pushed to Container Registry
 images:
-  - 'gcr.io/$PROJECT_ID/civicfix-ai-service:$SHORT_SHA'
   - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
 
 # Build options
