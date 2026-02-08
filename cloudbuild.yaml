@@ -7,23 +7,13 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:${SHORT_SHA:-latest}'
-      - '-t'
       - 'gcr.io/$PROJECT_ID/civicfix-ai-service:latest'
       - '-f'
-      - 'Dockerfile.production'
+      - 'Dockerfile'
       - '.'
     id: 'build-image'
 
-  # Step 2: Push the container image with commit SHA tag (if available)
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/civicfix-ai-service:${SHORT_SHA:-latest}'
-    id: 'push-sha-image'
-    waitFor: ['build-image']
-
-  # Step 3: Push the container image with latest tag
+  # Step 2: Push the container image with latest tag
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
@@ -31,7 +21,7 @@ steps:
     id: 'push-latest-image'
     waitFor: ['build-image']
 
-  # Step 4: Deploy to Cloud Run
+  # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -57,15 +47,14 @@ steps:
       - '1'
       - '--concurrency'
       - '80'
-      - '--cpu-boost'
       - '--set-secrets'
       - 'DATABASE_URL=database-url:latest,API_KEY=ai-service-api-key:latest,SECRET_KEY=ai-service-secret-key:latest'
       - '--set-env-vars'
-      - 'ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
+      - 'PORT=8080,ENABLE_MOCK_AI=false,DEBUG=false,WORKERS=4,LOG_LEVEL=info'
     id: 'deploy-cloud-run'
     waitFor: ['push-latest-image']
 
-  # Step 5: Run health check
+  # Step 4: Run health check
   - name: 'gcr.io/cloud-builders/curl'
     entrypoint: 'bash'
     args:

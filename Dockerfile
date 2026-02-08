@@ -24,12 +24,13 @@ COPY app/ ./app/
 # Create models directory
 RUN mkdir -p models
 
-# Expose port
-EXPOSE 8001
+# Expose port (Cloud Run uses PORT env variable)
+ENV PORT=8080
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8001/health')"
+    CMD python -c "import requests; requests.get('http://localhost:8080/health')"
 
 # Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
