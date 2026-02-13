@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     
     # Database
-    database_url: str
+    database_url: Optional[str] = None
     
     # AI Models
     fake_detection_model_path: str = "models/fake_detector.pth"
@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     reverse_image_search_enabled: bool = False
     
     # Security
-    api_key: str
-    secret_key: str
+    api_key: Optional[str] = None
+    secret_key: Optional[str] = None
     allowed_origins: str = "http://localhost:3000,http://localhost:5000"
     
     # Performance & Limits

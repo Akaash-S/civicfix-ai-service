@@ -19,9 +19,11 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements
 COPY requirements.txt .
 
-# Upgrade pip and install Python dependencies
+# Upgrade pip and install Python dependencies with retry logic
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir --retries 5 --timeout 60 -r requirements.txt || \
+    (sleep 5 && pip install --no-cache-dir --retries 5 --timeout 60 -r requirements.txt) || \
+    (sleep 10 && pip install --no-cache-dir --retries 5 --timeout 60 -r requirements.txt)
 
 # Copy application code
 COPY app/ ./app/

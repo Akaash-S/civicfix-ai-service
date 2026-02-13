@@ -301,7 +301,7 @@ async def verify_initial_issue(
             event_type="AI_VERIFICATION_COMPLETED",
             actor_type="AI",
             description=f"AI verification completed with status: {status}",
-            metadata={
+            extra_data={
                 "confidence_score": confidence_score,
                 "status": status,
                 "processing_time_ms": processing_time_ms
@@ -398,7 +398,7 @@ async def verify_cross_check(
             event_type="AI_CROSS_VERIFICATION_COMPLETED",
             actor_type="AI",
             description=f"Cross-verification completed: {result.notes}",
-            metadata={
+            extra_data={
                 "confidence": result.confidence,
                 "status": status,
                 "work_completed": result.work_appears_completed

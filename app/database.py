@@ -14,16 +14,26 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# Create database engine
-engine = create_engine(
-    settings.database_url,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20
-)
+# Create database engine only if database_url is provided
+engine = None
+SessionLocal = None
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+if settings.database_url:
+    try:
+        engine = create_engine(
+            settings.database_url,
+            pool_pre_ping=True,
+            pool_size=10,
+            max_overflow=20
+        )
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        logger.info("Database engine created successfully")
+    except Exception as e:
+        logger.warning(f"Failed to create database engine: {e}")
+        engine = None
+        SessionLocal = None
+else:
+    logger.warning("DATABASE_URL not provided, running without database")
 
 # Base class for models
 Base = declarative_base()
@@ -44,7 +54,7 @@ class AIVerification(Base):
     confidence_score = Column(Float)
     rejection_reasons = Column(ARRAY(Text))
     checks_performed = Column(JSON)
-    metadata = Column(JSON)
+    extra_data = Column("metadata", JSON)  # Map to 'metadata' column in DB
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -58,7 +68,7 @@ class TimelineEvent(Base):
     actor_type = Column(String(20), nullable=False)
     actor_id = Column(Integer)
     description = Column(Text, nullable=False)
-    metadata = Column(JSON)
+    extra_data = Column("metadata", JSON)  # Map to 'metadata' column in DB
     image_urls = Column(ARRAY(Text))
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -75,6 +85,11 @@ def get_db() -> Generator[Session, None, None]:
         with get_db() as db:
             # Use db session
     """
+    if SessionLocal is None:
+        logger.warning("Database not configured, skipping database operation")
+        yield None
+        return
+        
     db = SessionLocal()
     try:
         yield db
@@ -84,6 +99,10 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db():
     """Initialize database tables"""
+    if engine is None:
+        logger.warning("Database not configured, skipping initialization")
+        return
+        
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables initialized successfully")
@@ -94,6 +113,10 @@ def init_db():
 
 def check_db_connection() -> bool:
     """Check if database connection is healthy"""
+    if SessionLocal is None or engine is None:
+        logger.warning("Database not configured")
+        return False
+        
     try:
         db = SessionLocal()
         db.execute("SELECT 1")
@@ -116,7 +139,7 @@ def save_verification_result(
     confidence_score: float,
     rejection_reasons: list,
     checks_performed: dict,
-    metadata: dict = None
+    extra_data: dict = None
 ) -> AIVerification:
     """Save verification result to database"""
     verification = AIVerification(
@@ -126,7 +149,7 @@ def save_verification_result(
         confidence_score=confidence_score,
         rejection_reasons=rejection_reasons,
         checks_performed=checks_performed,
-        metadata=metadata or {}
+        extra_data=extra_data or {}
     )
     db.add(verification)
     db.commit()
@@ -141,7 +164,7 @@ def create_timeline_event(
     actor_type: str,
     description: str,
     actor_id: int = None,
-    metadata: dict = None,
+    extra_data: dict = None,
     image_urls: list = None
 ) -> TimelineEvent:
     """Create a timeline event"""
@@ -151,7 +174,7 @@ def create_timeline_event(
         actor_type=actor_type,
         actor_id=actor_id,
         description=description,
-        metadata=metadata or {},
+        extra_data=extra_data or {},
         image_urls=image_urls or []
     )
     db.add(event)
