@@ -30,6 +30,7 @@ from app.models import (
     CheckStatus,
     VerificationChecks
 )
+from app.services.assistant_service import AssistantService, ChatRequest, ChatResponse
 from app.services import (
     FakeDetectionService,
     DuplicateDetectionService,
@@ -110,7 +111,9 @@ metadata_validator_service = MetadataValidatorService()
 location_validator_service = LocationValidatorService()
 category_validator_service = CategoryValidatorService()
 cross_verification_service = CrossVerificationService()
+
 internet_search_service = InternetSearchService()
+assistant_service = AssistantService()
 
 
 # ================================
@@ -146,17 +149,6 @@ async def health_check():
     )
 
 
-@app.get("/api/v1/stats", response_model=StatsResponse)
-async def get_stats(api_key: str = Depends(verify_api_key)):
-    """Get verification statistics"""
-    uptime = int(time.time() - SERVICE_START_TIME)
-    avg_processing_time = (
-        stats["total_processing_time_ms"] // stats["total_verifications"]
-        if stats["total_verifications"] > 0
-        else 0
-    )
-    avg_confidence = 0.85  # TODO: Calculate from database
-    
     return StatsResponse(
         total_verifications=stats["total_verifications"],
         approved=stats["approved"],
@@ -166,6 +158,20 @@ async def get_stats(api_key: str = Depends(verify_api_key)):
         average_processing_time_ms=avg_processing_time,
         uptime_seconds=uptime
     )
+
+
+@app.post("/api/v1/assistant/chat", response_model=ChatResponse)
+async def chat_with_assistant(
+    request: ChatRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """Chat with AI Assistant"""
+    try:
+        response = await assistant_service.process_chat(request)
+        return response
+    except Exception as e:
+        logger.error(f"Chat processing failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ================================
